@@ -117,7 +117,7 @@ const int16_t quads1[] = {
 };
 
 const uint16_t quadColor1[] = {
-        RGBto565(0,0,0),COL33,COL31,COL31,COL32,COL32,
+        RGBto565(255,0,0),RGBto565(255,255,0),RGBto565(255,255,255),RGBto565(0,255,255),RGBto565(0,0,255),RGBto565(255,0,255),
   //RED, GREEN, BLUE, YELLOW, MAGENTA, CYAN
 };
 
@@ -553,110 +553,7 @@ void drawQuads(int *v2d)
   }
 } 
 
-// animated checkerboard pattern
-void backgroundChecker(int i)
-{
-  int x,y,xx,yy, xo,yo;
-  //xo = 25*fastSin(6*i)*fastCos(4*i)/(MAXSIN*MAXSIN);
-  //yo = 25*fastSin(3*i)*fastCos(5*i)/(MAXSIN*MAXSIN);
-  xo = 25*fastSin(4*i)/256+50;
-  yo = 25*fastSin(5*i)/256+50+yFr;
-
-  for(y=0;y<NLINES;y++) {
-    yy = (50+y+yo+yFr)% 32;
-    for(x=0;x<WD_3D;x++) {
-      xx = (50+x+xo)% 32;
-      //frBuf[SCR_WD*y+x] = ((xx<16 && yy<16) || (xx>16 && yy>16)) ? RGBto565(40,40,40) : RGBto565(80,80,80);
-      frBuf[SCR_WD*y+x] = ((xx<16 && yy<16) || (xx>16 && yy>16)) ? RGBto565(40,40,20) : RGBto565(80,80,40);
-    }
-  }
-}
-
-void backgroundPattern(int i, const unsigned short *pat)
-{
-  int x,y,xp,yp;
-  xp = 25*fastSin(4*i)/256+50;  // 256 not MAXSIN=255 to avoid jumping at max sin value
-  yp = 25*fastSin(5*i)/256+50+yFr;
-  for(y=0;y<NLINES;y++) for(x=0;x<WD_3D;x++) frBuf[SCR_WD*y+x] = pat[((y+yp)&0x1f)*32 + ((x+xp)&0x1f)];
-}
-
-// ------------------------------------------------
-
-struct Star {
-  int16_t x,y,z;
-  int16_t x2d,y2d, x2dOld,y2dOld;
-};
-
-#define NUM_STARS 150
-struct Star stars[NUM_STARS];
-int starSpeed = 20;
-
-void initStar(int i)
-{
-  stars[i].x = random(-500, 500);
-  stars[i].y = random(-500, 500);
-  stars[i].z = random(100, 2000);
-  // remove stars from the center
-  if(stars[i].x<80 && stars[i].x>-80) stars[i].x=80;
-  if(stars[i].y<80 && stars[i].y>-80) stars[i].y=80;
-}
-
-int16_t rotZ = 1;
-
-void updateStars()
-{
-  int16_t i,x,y;
-  for(i=0; i<NUM_STARS; i++) {
-    if(rotZ) {
-      x = stars[i].x;
-      y = stars[i].y;
-      //stars[i].x = (x * fastCos(rotZ) - y * fastSin(rotZ))/MAXSIN;
-      //stars[i].y = (y * fastCos(rotZ) + x * fastSin(rotZ))/MAXSIN;
-      stars[i].x = (x*254 - y*2)/MAXSIN;
-      stars[i].y = (y*254 + x*2)/MAXSIN;
-    }
-
-    stars[i].z -= starSpeed;
-    stars[i].x2d = WD_3D/2 + 100 * stars[i].x / stars[i].z;
-    stars[i].y2d = HT_3D/2 + 100 * stars[i].y / stars[i].z;
-
-    if(stars[i].x2d>WD_3D || stars[i].x2d<0 || stars[i].y2d>HT_3D || stars[i].y2d<0) {
-      initStar(i);
-      stars[i].x2d = WD_3D/2 + 100 * stars[i].x / stars[i].z;
-      stars[i].y2d = HT_3D/2 + 100 * stars[i].y / stars[i].z;
-      stars[i].x2dOld = stars[i].x2d;
-      stars[i].y2dOld = stars[i].y2d;
-    }
-  }
-}
-
-void initStars()
-{
-  for(int i=0; i<NUM_STARS; i++) initStar(i);
-  updateStars();
-  for(int i=0; i<NUM_STARS; i++) {
-    stars[i].x2dOld = stars[i].x2d;
-    stars[i].y2dOld = stars[i].y2d;
-  }
-}
-
-void backgroundStars(int f)
-{
-  int i;
-  for(i=0; i<NLINES*WD_3D; i++) frBuf[i] = BLACK;
-  for(i=0; i<NUM_STARS; i++) {
-    int r = 255-stars[i].z/5;
-    //int r = 255-stars[i].z*stars[i].z/15000;
-    if(r>255) r=255;
-    if(r<40) r=40;
-    uint16_t col = RGBto565(r,r,r);
-    int x = stars[i].x2d;
-    int y = stars[i].y2d - yFr;
-    if(x>=0 && x<WD_3D && y>0 && y<NLINES) frBuf[SCR_WD*y+x] = col;
-  }
-}
-
-// ------------------------------------------------
+// --------------------------------------------------
 
 int t=0;
 
@@ -690,16 +587,12 @@ void render3D(void)
     projVerts[2*i+1] = (100*HT_3D/2 + fac*transVerts[3*i+1] + 100/2)/100;
   }
 
-  if(bgMode==3) updateStars();
   cullQuads(transVerts);
 
   for(i=0;i<HT_3D;i+=NLINES) {
     yFr = i;
-    if(bgMode==0) backgroundPattern(t,pat2); else
-    if(bgMode==1) backgroundPattern(t,pat8); else
-    if(bgMode==2) backgroundPattern(t,pat7); else
-    if(bgMode==3) backgroundStars(t); else
-    if(bgMode==4) backgroundChecker(t);
+    // 填充背景成黑色
+    memset(frBuf,0,sizeof frBuf);
     drawQuads(projVerts);
       void drawImage(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t *img16);
       drawImage(0,yFr,SCR_WD,NLINES,frBuf);
@@ -707,8 +600,8 @@ void render3D(void)
 
   //旋转
   rot0 += 2;
-  rot1 = 45;
+  rot1 += 2;
   if(rot0>360) rot0-=360;
-//  if(rot1>360) rot1-=360;
+  if(rot1>360) rot1-=360;
 } 
 

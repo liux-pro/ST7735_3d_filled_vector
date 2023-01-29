@@ -25,7 +25,7 @@ static uint16_t workFrame[SCREEN_WIDTH * SCREEN_HEIGHT];
 
 
 void setup() {
-    initStars();
+//    initStars();
 }
 
 
