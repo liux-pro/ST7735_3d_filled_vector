@@ -14,10 +14,22 @@
  - backface culling
  - visible faces sorting by Z axis
 */
+#include "math.h"
+#include "stdlib.h"
+#define RGBto565(r,g,b) ((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3))
+
+#define pgm_read_byte *
+#include "stdint.h"
+#define BLACK 0
+
+int random(int min, int max) {
+    return rand() % (max - min + 1) + min;
+}
+
 
 #define swap(a, b) { int t = a; a = b; b = t; }
-
-#define NLINES 32
+// 一次渲染整个屏幕
+#define NLINES SCREEN_HEIGHT
 uint16_t frBuf[SCR_WD*NLINES];
 int yFr=0;
 
@@ -105,7 +117,7 @@ const int16_t quads1[] = {
 };
 
 const uint16_t quadColor1[] = {
-  COL33,COL33,COL31,COL31,COL32,COL32,
+        RGBto565(0,0,0),COL33,COL31,COL31,COL32,COL32,
   //RED, GREEN, BLUE, YELLOW, MAGENTA, CYAN
 };
 
@@ -576,7 +588,7 @@ struct Star {
 };
 
 #define NUM_STARS 150
-Star stars[NUM_STARS];
+struct Star stars[NUM_STARS];
 int starSpeed = 20;
 
 void initStar(int i)
@@ -671,7 +683,8 @@ void render3D(void)
     transVerts[3*i+1] = (cos1*y0 + (cos0*sin1*z0-sin0*sin1*x0)/MAXSIN)/MAXSIN;
     transVerts[3*i+2] = camZ + ((cos0*cos1*z0-sin0*cos1*x0)/MAXSIN - sin1*y0)/MAXSIN;
 
-    fac = scaleFactor * near / (transVerts[3*i+2]+near+distToObj);
+    fac = 60;
+//    fac = scaleFactor * near / (transVerts[3*i+2]+near+distToObj);
 
     projVerts[2*i+0] = (100*WD_3D/2 + fac*transVerts[3*i+0] + 100/2)/100;
     projVerts[2*i+1] = (100*HT_3D/2 + fac*transVerts[3*i+1] + 100/2)/100;
@@ -688,12 +701,14 @@ void render3D(void)
     if(bgMode==3) backgroundStars(t); else
     if(bgMode==4) backgroundChecker(t);
     drawQuads(projVerts);
-    lcd.drawImage(0,yFr,SCR_WD,NLINES,frBuf);
+      void drawImage(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t *img16);
+      drawImage(0,yFr,SCR_WD,NLINES,frBuf);
   }
 
+  //旋转
   rot0 += 2;
-  rot1 += 4;
+  rot1 = 45;
   if(rot0>360) rot0-=360;
-  if(rot1>360) rot1-=360;
+//  if(rot1>360) rot1-=360;
 } 
 
